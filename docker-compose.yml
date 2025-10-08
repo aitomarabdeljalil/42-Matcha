@@ -1,0 +1,33 @@
+
+services:
+  postgres:
+    image: postgres:16
+    env_file: ./server/.env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    networks:
+      - matcha-network
+
+  # backend:
+  #   build: 
+  #     context: ./server
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "8000:8000"
+  #   env_file: ./server/.env
+  #   depends_on:
+  #     - postgres
+  #   volumes:
+  #     - ./server:/app
+  #     - /app/node_modules
+  #   networks:
+  #     - matcha-network
+
+volumes:
+  postgres_data:
+
+networks:
+  matcha-network:
+    driver: bridge
