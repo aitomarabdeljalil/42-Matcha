@@ -40,6 +40,10 @@ class User {
       `, [lat, lng, lat, radius])
       .limit(limit);
   }
+  
+  static async deleteByEmail(email) {
+    return db('users').where({ email }).del();
+  }
 }
 
 module.exports = User;

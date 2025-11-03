@@ -1,10 +1,10 @@
 const User = require('../models/User');
 const { hashPassword, comparePassword } = require('../utils/bcrypt');
-const { generateToken } = require('../utils/jwt');
+const { generateAccessToken, generateRefreshToken } = require('../utils/jwt');
 
 const register = async (req, res) => {
   try {
-    const { email, password, first_name, last_name, birth_date, gender, preferred_gender } = req.body;
+    const { email, password, username, first_name, last_name, birth_date, gender, preferred_gender } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findByEmail(email);
@@ -19,6 +19,7 @@ const register = async (req, res) => {
     const user = await User.create({
       email,
       password: hashedPassword,
+      username: username || email.split('@')[0], // Default username
       first_name,
       last_name,
       birth_date,
@@ -26,8 +27,9 @@ const register = async (req, res) => {
       preferred_gender
     });
 
-    // Generate token
-    const token = generateToken({ userId: user.id });
+    // Generate tokens
+    const accessToken = generateAccessToken({ userId: user.id });
+    const refreshToken = generateRefreshToken({ userId: user.id });
 
     // Remove password from response
     const { password: _, ...userWithoutPassword } = user;
@@ -35,7 +37,8 @@ const register = async (req, res) => {
     res.status(201).json({
       message: 'User registered successfully',
       user: userWithoutPassword,
-      token
+      token: accessToken,
+      refreshToken
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -59,8 +62,9 @@ const login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Generate token
-    const token = generateToken({ userId: user.id });
+    // Generate tokens
+    const accessToken = generateAccessToken({ userId: user.id });
+    const refreshToken = generateRefreshToken({ userId: user.id });
 
     // Remove password from response
     const { password: _, ...userWithoutPassword } = user;
@@ -68,7 +72,8 @@ const login = async (req, res) => {
     res.json({
       message: 'Login successful',
       user: userWithoutPassword,
-      token
+      token: accessToken,
+      refreshToken
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -114,9 +119,15 @@ const updateProfile = async (req, res) => {
   }
 };
 
+const logout = async (req, res) => {
+  // For JWT, logout is handled client-side by deleting the token. (Thinking of blacklist tokens here).
+  res.status(200).json({ message: 'Logout successful' });
+};
+
 module.exports = {
   register,
   login,
+  logout,
   getProfile,
   updateProfile
 };

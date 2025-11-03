@@ -5,6 +5,8 @@ const rateLimit = require('express-rate-limit');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 
+const { swaggerUi, swaggerDocument } = require('./swagger');
+
 const app = express();
 
 const PORT = process.env.PORT || 8000;
@@ -25,6 +27,13 @@ app.use(limiter);
 app.use(express.json({ limit: process.env.MAX_FILE_SIZE || '5mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+
+// Swagger
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+  explorer: true,
+  customCss: '.swagger-ui .topbar { display: none }'
+}));
+
 // Static files
 app.use('/uploads', express.static('uploads'));
 
@@ -41,6 +50,15 @@ app.get('/health', (req, res) => {
   });
 });
 
+// A Root Route For Testing
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Matcha API Server is running!',
+    documentation: 'Visit /api-docs for API documentation',
+    health: 'Visit /health for health check'
+  });
+});
+
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
@@ -52,9 +70,5 @@ app.use((error, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// app.listen(PORT, () => {
-//   console.log(`Server is running on http://localhost:${PORT}`);
-//   console.log(`API Documentation available at http://localhost:${PORT}/api-docs`);
-// });
 
 module.exports = app;

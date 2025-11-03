@@ -1,4 +1,4 @@
-const { verifyToken } = require('../utils/jwt');
+const { verifyAccessToken } = require('../utils/jwt');
 const User = require('../models/User');
 
 const authenticate = async (req, res, next) => {
@@ -9,7 +9,7 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ error: 'Access denied. No token provided.' });
     }
 
-    const decoded = verifyToken(token);
+    const decoded = verifyAccessToken(token);
     const user = await User.findById(decoded.userId);
     
     if (!user) {

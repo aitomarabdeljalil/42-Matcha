@@ -33,5 +33,18 @@ module.exports = {
       min: 2,
       max: 10
     }
+  },
+  test: {
+    client: 'sqlite3',
+    connection: {
+      filename: './test.sqlite3'
+    },
+    useNullAsDefault: true,
+    migrations: {
+      directory: './src/migrations'
+    },
+    seeds: {
+      directory: './src/seeds'
+    }
   }
 };
