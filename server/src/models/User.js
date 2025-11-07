@@ -41,6 +41,20 @@ class User {
       .limit(limit);
   }
   
+  static async findByGoogleId(googleId) {
+    return db('users').where({ googleId }).first();
+  }
+
+  static async createOAuth({ googleId, facebookId, email, username, first_name, last_name }) {
+    return db('users').insert({
+      googleId,
+      email,
+      username,
+      first_name,
+      last_name
+    }).returning('*').then(rows => rows[0]);
+  }
+
   static async deleteByEmail(email) {
     return db('users').where({ email }).del();
   }

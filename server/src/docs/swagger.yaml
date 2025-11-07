@@ -1,9 +1,9 @@
 # src/docs/swagger.yaml
 openapi: 3.1.0
 info:
-  title: Matcha Authentication API
+  title: Matcha API
   version: 1.0.0
-  description: API for user authentication (register, login, logout, refresh token, protected route)
+  description: API for Matcha application
 servers:
   - url: http://localhost:8000/api
 paths:
@@ -114,6 +114,32 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /auth/google:
+    get:
+      summary: Google OAuth login
+      description: Redirects user to Google for authentication
+      responses:
+        '302':
+          description: Redirect to Google login
+  
+  /auth/google/callback:
+    get:
+      summary: Google OAuth callback
+      description: Handles Google OAuth callback and authenticates user
+      responses:
+        '200':
+          description: Google OAuth success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthResponse'
+        '401':
+          description: Google OAuth failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  
 components:
   securitySchemes:
     bearerAuth:
@@ -177,6 +203,13 @@ components:
     SuccessResponse:
       type: object
       properties:
+        message:
+          type: string
+    OAuthResponse:
+      type: object
+      properties:
+        user:
+          type: object
         message:
           type: string
     ErrorResponse:

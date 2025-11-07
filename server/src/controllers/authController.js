@@ -124,10 +124,33 @@ const logout = async (req, res) => {
   res.status(200).json({ message: 'Logout successful' });
 };
 
+const googleOAuthCallback = async (req, res) => {
+  try {
+    // Generate JWT token for the authenticated user
+    const token = generateAccessToken({ userId: req.user.id });
+    const refreshToken = generateRefreshToken({ userId: req.user.id });
+
+    // Remove password from user object
+    const { password: _, ...userWithoutPassword } = req.user;
+
+    // Send the response with user data and tokens
+    res.status(200).json({
+      message: 'Google OAuth login successful',
+      user: userWithoutPassword,
+      token,
+      refreshToken
+    });
+  } catch (error) {
+    console.error('Google OAuth callback error:', error);
+    res.status(500).json({ error: 'Authentication failed' });
+  }
+};
+
 module.exports = {
   register,
   login,
   logout,
   getProfile,
-  updateProfile
+  updateProfile,
+  googleOAuthCallback
 };

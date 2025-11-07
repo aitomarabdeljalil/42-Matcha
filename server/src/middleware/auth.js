@@ -1,23 +1,35 @@
 const { verifyAccessToken } = require('../utils/jwt');
 const User = require('../models/User');
 
+// Helper: accept token from Bearer header, query param, or body
+const extractToken = (req) => {
+  return (
+    req.header('Authorization')?.replace('Bearer ', '') ||
+    req.query?.token ||
+    req.body?.token ||
+    null
+  );
+};
+
 const authenticate = async (req, res, next) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    
+    const token = extractToken(req);
+
     if (!token) {
       return res.status(401).json({ error: 'Access denied. No token provided.' });
     }
 
     const decoded = verifyAccessToken(token);
-    const user = await User.findById(decoded.userId);
-    
+    // payload may contain { userId: id } — tolerate a few shapes
+    const userId = decoded?.userId || decoded?.id || (decoded?.user && decoded.user.id);
+    const user = await User.findById(userId);
+
     if (!user) {
       return res.status(401).json({ error: 'Invalid token.' });
     }
 
-    // Update last online timestamp
-    User.updateLastOnline(user.id);
+    // Update last online timestamp (fire-and-forget)
+    User.updateLastOnline(user.id).catch(() => {});
 
     req.user = user;
     next();
@@ -28,19 +40,19 @@ const authenticate = async (req, res, next) => {
 
 const optionalAuth = async (req, res, next) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    
+    const token = extractToken(req);
     if (token) {
-      const decoded = verifyToken(token);
-      const user = await User.findById(decoded.userId);
+      const decoded = verifyAccessToken(token);
+      const userId = decoded?.userId || decoded?.id || (decoded?.user && decoded.user.id);
+      const user = await User.findById(userId);
       if (user) {
-        User.updateLastOnline(user.id);
+        User.updateLastOnline(user.id).catch(() => {});
         req.user = user;
       }
     }
-    
     next();
   } catch (error) {
+    // ignore errors in optional auth
     next();
   }
 };

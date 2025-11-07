@@ -1,14 +1,14 @@
 exports.up = function(knex) {
   return knex.schema.createTable('users', function(table) {
     table.increments('id').primary();
-    table.string('email').unique().notNullable();
+    table.string('email').notNullable().unique();
     table.string('username').notNullable().unique();
-    table.string('password').notNullable();
-    table.string('first_name').notNullable();
+    table.string('password');
+    table.string('first_name');
     table.string('last_name').notNullable();
-    table.date('birth_date').notNullable();
-    table.string('gender').notNullable();
-    table.string('preferred_gender').notNullable();
+    table.date('birth_date');
+    table.string('gender');
+    table.string('preferred_gender');
     table.text('bio');
     table.string('profile_picture');
     table.decimal('latitude', 10, 7);
@@ -16,6 +16,7 @@ exports.up = function(knex) {
     table.boolean('is_verified').defaultTo(false);
     table.boolean('is_profile_complete').defaultTo(false);
     table.timestamp('last_online').defaultTo(knex.fn.now());
+    table.string('googleId').unique();
     table.timestamps(true, true);
     
     // Indexes for better performance
