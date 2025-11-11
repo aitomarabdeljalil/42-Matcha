@@ -58,6 +58,13 @@ class User {
   static async deleteByEmail(email) {
     return db('users').where({ email }).del();
   }
+
+  static async findByValidResetToken(tokenHash, now = new Date()) {
+    return db('users')
+      .where({ reset_password_token: tokenHash })
+      .andWhere('reset_password_expires', '>', now)
+      .first();
+  }
 }
 
 module.exports = User;
