@@ -76,11 +76,10 @@ const forgotPassword = async (req, res) => {
       // If no FRONTEND_URL is provided, fall back to the API reset endpoint so the link works on the server.
       const frontendUrl = process.env.FRONTEND_URL && process.env.FRONTEND_URL.replace(/\/$/, '');
       const apiBase = (process.env.API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '');
-      if (frontendUrl) {
-        resetLink = `${frontendUrl}/reset-password?token=${rawToken}&email=${encodeURIComponent(email)}`;
-      } else {
-        // Point to API endpoint when no frontend is available
+      if (apiBase) {
         resetLink = `${apiBase}/api/auth/reset-password?token=${rawToken}&email=${encodeURIComponent(email)}`;
+      } else {
+        resetLink = `${frontendUrl}/reset-password?token=${rawToken}&email=${encodeURIComponent(email)}`;
       }
 
       if (process.env.ALLOW_FAKE_RESET === 'false' && process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
@@ -90,7 +89,6 @@ const forgotPassword = async (req, res) => {
           console.error('Forgot password email error:', mailErr);
         }
       } else {
-        console.log('Password reset link (dev):', resetLink);
         return res.status(200).json({ message: 'If that email exists, a reset link has been sent', resetToken: rawToken, resetLink, devFake });
       } 
     }
