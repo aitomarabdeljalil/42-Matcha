@@ -8,7 +8,6 @@ exports.up = function(knex) {
     table.string('last_name').notNullable();
     table.date('birth_date');
     table.string('gender');
-    table.string('preferred_gender');
     table.text('bio');
     table.string('profile_picture');
     table.decimal('latitude', 10, 7);

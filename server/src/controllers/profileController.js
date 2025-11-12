@@ -7,6 +7,8 @@ function normalizeUser(user) {
   try { u.photos = user.photos ? JSON.parse(user.photos) : []; } catch (e) { u.photos = user.photos || []; }
   try { u.interests = user.interests ? JSON.parse(user.interests) : []; } catch (e) { u.interests = user.interests || []; }
   try { u.sexual_preferences = user.sexual_preferences ? JSON.parse(user.sexual_preferences) : []; } catch (e) { u.sexual_preferences = user.sexual_preferences || []; }
+  // Remove sensitive fields before returning the user object
+  try { delete u.password; } catch (e) { /* ignore */ }
   return u;
 }
 
