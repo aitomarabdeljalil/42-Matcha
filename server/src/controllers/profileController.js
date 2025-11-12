@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const autoLocation = require('../middleware/autoLocation');
 
 function normalizeUser(user) {
   if (!user) return user;
@@ -110,14 +111,35 @@ const toggleLike = async (req, res) => {
 };
 
 // PUT /api/profile/location
+/* 
+curl -i -X PUT "http://localhost:8000/api/profile/location?force_location_update=true&ip=8.8.8.8&debug_geo=true" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+*/
 const setLocation = async (req, res) => {
   try {
     const userId = req.user.id;
     const { latitude, longitude, city, country } = req.body || {};
-    if (latitude === undefined || longitude === undefined) return res.status(400).json({ error: 'Latitude and longitude required' });
-    const updated = await User.setManualLocation(userId, { latitude, longitude, city, country });
-    await User.recalcFameRating(userId);
-    return res.status(200).json({ user: normalizeUser(updated) });
+    // If latitude/longitude provided in body treat as manual update.
+    if (latitude !== undefined && longitude !== undefined) {
+      const updated = await User.setManualLocation(userId, { latitude, longitude, city, country });
+      await User.recalcFameRating(userId);
+      return res.status(200).json({ user: normalizeUser(updated) });
+    }
+
+  // No coords in body: run autoLocation middleware now (it respects the 24h throttle unless forced).
+  await new Promise((resolve) => autoLocation(req, null, resolve));
+  // Return the fresh user record (so callers can see the auto-populated coords).
+  const fresh = await User.findById(userId);
+    // If still no coords available, indicate that we couldn't determine location yet.
+    const debugGeo = req.query && req.query.debug_geo === 'true';
+    if (fresh && (fresh.latitude === null || fresh.latitude === undefined) && (fresh.longitude === null || fresh.longitude === undefined)) {
+      const resp = { message: 'Location not available yet', user: normalizeUser(fresh) };
+      if (debugGeo && req._lastGeo) resp.geoDebug = req._lastGeo;
+      return res.status(200).json(resp);
+    }
+    const resp = { user: normalizeUser(fresh) };
+    if (debugGeo && req._lastGeo) resp.geoDebug = req._lastGeo;
+    return res.status(200).json(resp);
   } catch (error) {
     console.error('Set location error:', error);
     return res.status(500).json({ error: 'Failed to set location' });
