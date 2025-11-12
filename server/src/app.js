@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
+const profileRoutes = require('./routes/profile');
 
 const { swaggerUi, swaggerDocument } = require('./swagger');
 
@@ -40,6 +41,7 @@ app.use('/uploads', express.static('uploads'));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/profile', profileRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

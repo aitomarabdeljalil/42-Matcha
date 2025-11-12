@@ -1,0 +1,133 @@
+const User = require('../models/User');
+
+function normalizeUser(user) {
+  if (!user) return user;
+  const u = { ...user };
+  try { u.photos = user.photos ? JSON.parse(user.photos) : []; } catch (e) { u.photos = user.photos || []; }
+  try { u.interests = user.interests ? JSON.parse(user.interests) : []; } catch (e) { u.interests = user.interests || []; }
+  try { u.sexual_preferences = user.sexual_preferences ? JSON.parse(user.sexual_preferences) : []; } catch (e) { u.sexual_preferences = user.sexual_preferences || []; }
+  return u;
+}
+
+// PATCH /api/profile
+const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { gender, sexualPreferences, biography, interests } = req.body || {};
+    const updates = {};
+    if (gender !== undefined) updates.gender = gender;
+    if (sexualPreferences !== undefined) updates.sexual_preferences = JSON.stringify(sexualPreferences);
+    if (biography !== undefined) updates.biography = biography;
+    if (interests !== undefined) updates.interests = JSON.stringify(interests);
+
+  const updated = await User.update(userId, updates);
+  await User.recalcProfileCompletion(userId);
+  await User.recalcFameRating(userId);
+  const fresh = await User.findById(userId);
+  return res.status(200).json({ user: normalizeUser(fresh) });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    return res.status(500).json({ error: 'Failed to update profile' });
+  }
+};
+
+// POST /api/profile/photos
+const managePhotos = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { action } = req.body || {};
+    if (!action) return res.status(400).json({ error: 'Action is required' });
+
+    if (action === 'add') {
+      const { photo } = req.body;
+      if (!photo) return res.status(400).json({ error: 'Photo URL is required' });
+  const updated = await User.addPhoto(userId, photo);
+  await User.recalcProfileCompletion(userId);
+  await User.recalcFameRating(userId);
+  return res.status(200).json({ user: normalizeUser(updated) });
+    }
+
+    if (action === 'remove') {
+      const { index } = req.body;
+      if (index === undefined) return res.status(400).json({ error: 'Index is required' });
+  const updated = await User.removePhoto(userId, index);
+  await User.recalcProfileCompletion(userId);
+  await User.recalcFameRating(userId);
+  return res.status(200).json({ user: normalizeUser(updated) });
+    }
+
+    if (action === 'reorder') {
+      const { order } = req.body; // expected array of photo URLs
+      if (!Array.isArray(order)) return res.status(400).json({ error: 'Order array required' });
+      if (order.length > 5) return res.status(400).json({ error: 'Max 5 photos allowed' });
+  const updated = await User.reorderPhotos(userId, order);
+  await User.recalcProfileCompletion(userId);
+  await User.recalcFameRating(userId);
+  return res.status(200).json({ user: normalizeUser(updated) });
+    }
+
+    return res.status(400).json({ error: 'Unknown action' });
+  } catch (error) {
+    console.error('Manage photos error:', error);
+    if (error.message === 'MAX_PHOTOS_REACHED') return res.status(400).json({ error: 'Max 5 photos allowed' });
+    return res.status(500).json({ error: 'Failed to manage photos' });
+  }
+};
+
+// POST /api/profile/view/:userId
+const trackView = async (req, res) => {
+  try {
+    const viewerId = req.user.id;
+    const viewedId = parseInt(req.params.userId, 10);
+    if (!viewedId) return res.status(400).json({ error: 'Invalid userId' });
+    if (viewerId === viewedId) return res.status(400).json({ error: 'Cannot view your own profile' });
+  const updated = await User.incrementView(viewerId, viewedId);
+  if (updated) await User.recalcFameRating(viewedId);
+  return res.status(200).json({ user: normalizeUser(updated) });
+  } catch (error) {
+    console.error('Track view error:', error);
+    return res.status(500).json({ error: 'Failed to track view' });
+  }
+};
+
+// POST /api/profile/like/:userId
+const toggleLike = async (req, res) => {
+  try {
+    const likerId = req.user.id;
+    const likedId = parseInt(req.params.userId, 10);
+    if (!likedId) return res.status(400).json({ error: 'Invalid userId' });
+    if (likerId === likedId) return res.status(400).json({ error: 'Cannot like your own profile' });
+  const { user, liked } = await User.toggleLike(likerId, likedId);
+  if (user) await User.recalcFameRating(likedId);
+  return res.status(200).json({ user: normalizeUser(user), liked });
+  } catch (error) {
+    console.error('Toggle like error:', error);
+    if (error.code === 'SQLITE_CONSTRAINT' || /unique/i.test(error.message)) {
+      // unique constraint - already liked
+    }
+    return res.status(500).json({ error: 'Failed to toggle like' });
+  }
+};
+
+// PUT /api/profile/location
+const setLocation = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { latitude, longitude, city, country } = req.body || {};
+    if (latitude === undefined || longitude === undefined) return res.status(400).json({ error: 'Latitude and longitude required' });
+    const updated = await User.setManualLocation(userId, { latitude, longitude, city, country });
+    await User.recalcFameRating(userId);
+    return res.status(200).json({ user: normalizeUser(updated) });
+  } catch (error) {
+    console.error('Set location error:', error);
+    return res.status(500).json({ error: 'Failed to set location' });
+  }
+};
+
+module.exports = {
+  updateProfile,
+  managePhotos,
+  trackView,
+  toggleLike,
+  setLocation
+};
