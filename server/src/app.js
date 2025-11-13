@@ -5,6 +5,7 @@ const rateLimit = require('express-rate-limit');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const profileRoutes = require('./routes/profile');
+const discoveryRoutes = require('./routes/discovery');
 
 const { swaggerUi, swaggerDocument } = require('./swagger');
 
@@ -42,6 +43,7 @@ app.use('/uploads', express.static('uploads'));
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/discovery', discoveryRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
