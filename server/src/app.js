@@ -2,10 +2,12 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const profileRoutes = require('./routes/profile');
 const discoveryRoutes = require('./routes/discovery');
+const avatarRoutes = require('./routes/avatar');
 
 const { swaggerUi, swaggerDocument } = require('./swagger');
 
@@ -38,12 +40,14 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
 
 // Static files
 app.use('/uploads', express.static('uploads'));
+app.use('/avatars', express.static(path.join(__dirname, '../uploads/avatars')));
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/discovery', discoveryRoutes);
+app.use('/api/profile/avatar', avatarRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
