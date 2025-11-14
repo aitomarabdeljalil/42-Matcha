@@ -1,6 +1,23 @@
 const db = require('../config/database');
 
 class User {
+  static parseJsonField(value) {
+    if (!value) return [];
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+        if (Array.isArray(parsed)) return parsed;
+        // If parsed is a single value, return as single-element array
+        return [parsed];
+      } catch (e) {
+        // Not a JSON string - treat as single value
+        return [value];
+      }
+    }
+    return [];
+  }
+
   static async create(userData) {
     const [user] = await db('users')
       .insert(userData)
@@ -12,7 +29,7 @@ class User {
   static async addPhoto(id, photoUrl) {
     return db.transaction(async trx => {
       const user = await trx('users').where({ id }).first();
-      const photos = user.photos ? JSON.parse(user.photos) : [];
+      const photos = User.parseJsonField(user.photos);
       if (photos.length >= 5) throw new Error('MAX_PHOTOS_REACHED');
       photos.push(photoUrl);
       const [updated] = await trx('users').where({ id }).update({ photos: JSON.stringify(photos) }).returning('*');
@@ -23,7 +40,7 @@ class User {
   static async removePhoto(id, index) {
     return db.transaction(async trx => {
       const user = await trx('users').where({ id }).first();
-      const photos = user.photos ? JSON.parse(user.photos) : [];
+      const photos = User.parseJsonField(user.photos);
       if (index < 0 || index >= photos.length) throw new Error('INVALID_PHOTO_INDEX');
       photos.splice(index, 1);
       const [updated] = await trx('users').where({ id }).update({ photos: JSON.stringify(photos) }).returning('*');
@@ -91,11 +108,11 @@ class User {
   static async recalcProfileCompletion(id) {
     const user = await db('users').where({ id }).first();
     const genderScore = user.gender ? 15 : 0;
-    const prefScore = user.preferred_gender || user.sexual_preferences ? 15 : 0;
+    const prefScore = (user.preferred_gender || user.sexual_preferences) ? 15 : 0;
     const bioScore = user.biography ? 20 : 0;
-    const interests = user.interests ? JSON.parse(user.interests) : [];
+    const interests = User.parseJsonField(user.interests);
     const interestsScore = (interests && interests.length > 0) ? 15 : 0;
-    const photos = user.photos ? JSON.parse(user.photos) : [];
+    const photos = User.parseJsonField(user.photos);
     const photosScore = (photos && photos.length > 0) ? Math.min(35, Math.round((photos.length / 5) * 35)) : 0;
     const completion = genderScore + prefScore + bioScore + interestsScore + photosScore;
     const [updated] = await db('users').where({ id }).update({ profile_completion: completion }).returning('*');
